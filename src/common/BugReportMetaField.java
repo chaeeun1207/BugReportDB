@@ -11,20 +11,8 @@ public class BugReportMetaField {
 	String component;
 	String productVer;
 	String hardware;
-	public String getWhiteboard() {
-		return whiteboard;
-	}
-	public void setWhiteboard(String whiteboard) {
-		this.whiteboard = whiteboard;
-	}
-	String os;
-	public String getOs() {
-		return os;
-	}
-	public void setOs(String os) {
-		this.os = os;
-	}
 	String openDate;
+	String modifiedDate;
 	String status;
 	String priority;
 	String sever;
@@ -32,7 +20,17 @@ public class BugReportMetaField {
 	String qa;
 	String mileStone;
 	String whiteboard;
+	String os;
+	ArrayList<String> ccList = new ArrayList<String>();
 	
+
+
+	public String getModifiedDate() {
+		return modifiedDate;
+	}
+	public void setModifiedDate(String modifiedDate) {
+		this.modifiedDate = modifiedDate;
+	}
 	public String getMileStone() {
 		return mileStone;
 	}
@@ -40,9 +38,18 @@ public class BugReportMetaField {
 		this.mileStone = mileStone;
 	}
 
-	ArrayList<String> ccList = new ArrayList<String>();
-	
-
+	public String getWhiteboard() {
+		return whiteboard;
+	}
+	public void setWhiteboard(String whiteboard) {
+		this.whiteboard = whiteboard;
+	}
+	public String getOs() {
+		return os;
+	}
+	public void setOs(String os) {
+		this.os = os;
+	}
 	public void addCC(String cc){
 		ccList.add(cc);
 	}
@@ -137,9 +144,17 @@ public class BugReportMetaField {
 	public String toString() {
 		return "BugReportMetaField [bugID=" + bugID + ", reporter=" + reporter + ", domain=" + domain + ", product="
 				+ product + ", component=" + component + ", productVer=" + productVer + ", hardware=" + hardware
-				+ ", os=" + os + ", openDate=" + openDate + ", status=" + status + ", priority=" + priority + ", sever="
-				+ sever + ", assignee=" + assignee + ", qa=" + qa + ", mileStone=" + mileStone + ", whiteboard="
-				+ whiteboard + ", ccList=" + ccList + "]";
+				+ ", openDate=" + openDate + ", modifiedDate=" + modifiedDate + ", status=" + status + ", priority="
+				+ priority + ", sever=" + sever + ", assignee=" + assignee + ", qa=" + qa + ", mileStone=" + mileStone
+				+ ", whiteboard=" + whiteboard + ", ccList=" + ccList + ", os=" + os + ", getModifiedDate()="
+				+ getModifiedDate() + ", getMileStone()=" + getMileStone() + ", getWhiteboard()=" + getWhiteboard()
+				+ ", getOs()=" + getOs() + ", getCcList()=" + getCcList() + ", getQa()=" + getQa() + ", getDomain()="
+				+ getDomain() + ", getAssignee()=" + getAssignee() + ", getBugID()=" + getBugID() + ", getProduct()="
+				+ getProduct() + ", getComponent()=" + getComponent() + ", getProductVer()=" + getProductVer()
+				+ ", getReporter()=" + getReporter() + ", getOpenDate()=" + getOpenDate() + ", getStatus()="
+				+ getStatus() + ", getSever()=" + getSever() + ", getPriority()=" + getPriority() + ", getHardware()="
+				+ getHardware() + ", getClass()=" + getClass() + ", hashCode()=" + hashCode() + ", toString()="
+				+ super.toString() + "]";
 	}
 	
 	

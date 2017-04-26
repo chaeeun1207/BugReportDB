@@ -1,102 +1,212 @@
 package db;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 
 import common.BugReport;
-import common.EvaluatedMetrics;
-import common.ForXML;
-import common.Property;
+import common.BugReportMetaField;
+import common.Comment;
+import common.History;
 
 public class DB {
-	private Connection conn = null;
+	static public HashMap<String, Connection> connMap = new HashMap<String, Connection>();;
+	static public ArrayList<String> errorList = new ArrayList<String>();
 	
-	DB() throws Exception
+	DB(HashMap<String, String> domainMap) throws Exception
 	{
 		Class.forName("org.h2.Driver");
-		conn = DriverManager.getConnection("jdbc:h2:./DB/"+Property.getInstance().getTargetResolution()+"/"+A_Main.project,"sa","");
-		System.out.println("-------- CONNECT WITH "+Property.getInstance().getTargetResolution()+" "+A_Main.project+" DB ----------");;
-		
-		if(conn!=null) createTable();
+		Iterator iter = domainMap.keySet().iterator();
+		while(iter.hasNext()){
+			String project = (String) iter.next();
+			String domain = domainMap.get(project);
+			Connection conn = DriverManager.getConnection("jdbc:h2:./DB/"+domain+"/"+project,"sa","");
+			System.out.println("-------- CONNECT WITH "+domain+" "+project+" DB ----------");;
+			connMap.put(domain+"-"+project, conn);
+		}
 	}		
-	
-	public Connection getConn()
+
+	DB(HashMap<String, String> domainMap,boolean del) throws Exception
 	{
-		return conn;
+		if(del == true){
+			Class.forName("org.h2.Driver");
+			Iterator iter = domainMap.keySet().iterator();
+			while(iter.hasNext()){
+				String project = (String) iter.next();
+				String domain = domainMap.get(project);
+				Connection conn = DriverManager.getConnection("jdbc:h2:./DB/"+domain+"/"+project,"sa","");
+				System.out.println("-------- CONNECT WITH "+domain+" "+project+" DB ----------");;
+				connMap.put(domain+"-"+project, conn);
+				dropTable(domain,project);			
+				if(conn!=null) createTable(domain,project);
+			}
+		}
+		if(del == false){
+			Class.forName("org.h2.Driver");
+			Iterator iter = domainMap.keySet().iterator();
+			while(iter.hasNext()){
+				String project = (String) iter.next();
+				String domain = domainMap.get(project);
+				Connection conn = DriverManager.getConnection("jdbc:h2:./DB/"+domain+"/"+project,"sa","");
+				System.out.println("-------- CONNECT WITH "+domain+" "+project+" DB ----------");;
+				connMap.put(domain+"-"+project, conn);				
+				cleanTable(domain,project);			
+			}
+		}
+	}		
+	/*
+	public Connection getConn(String domain, String project)
+	{
+		return connMap.get(domain+"-"+project);
+	}*/
+
+	private void cleanTable(String domain, String project) throws SQLException {
+		Statement q = connMap.get(domain+"-"+project).createStatement();
+		q.execute("DELETE FROM BUG_REPORT;");
+		System.out.println("---DELETE BUG_REPORT TABLE...");
+		q.execute("DELETE FROM META_FIELD;");
+		System.out.println("---DELETE META_FIELD TABLE...");
+		q.execute("DELETE FROM  HISTORY;");
+		System.out.println("---DELETE HISTORY TABLE...");
+		q.execute("DELETE FROM COMMENT;");
+		System.out.println("---DELETE COMMENT TABLE...");
+		
 	}
 
-	private void createTable() throws Exception
+	private void createTable(String domain, String project) throws Exception
 	{
-		Statement q = conn.createStatement();
+		Statement q = connMap.get(domain+"-"+project).createStatement();
 		try
 		{
-			q.execute("Create Table Initial_BUG_REPORT("
+			q.execute("Create Table BUG_REPORT("
 					+ "BUG_ID int PRIMARY KEY,"
-					+ "BUG_REPORTER VARCHAR(255),"
-					+ "PRD_NAME varchar(255),"
-					+ "COMP_NAME varchar(255),"
-					+ "PRD_VER varchar(50),"
-					+ "BUG_HW varchar(128),"					
-					+ "BUG_OPEN_DATE DATETIME,"
-					+ "BUG_STATUS VARCHAR(255),"
-					+ "BUG_PRIOR VARCHAR(128),"
-					+ "BUG_SEVER VARCHAR(255),"
-					+ "BUG_SUM VARCHAR(255),"
-					+ "BUG_DES VARCHAR(99999),"
-					
-					+ "EVAL_ITEM INT,"
-					+ "EVAL_KEYWORD_ACTION INT,"
-					+ "EVAL_KEYWORD_RESULT INT,"
-					+ "EVAL_KEYWORD_STEP INT,"
-					+ "EVAL_KEYWORD_BUILD INT,"
-					+ "EVAL_KEYWORD_UI INT,"
-					+ "EVAL_KEYWORD_SCORE DOUBLE,"
-					+ "EVAL_CODE INT,"
-					+ "EVAL_PATCH INT,"
-					+ "EVAL_STRACT INT,"
-					
-					+ "EVAL_READ_INCAID DOUBLE,"
-					+ "EVAL_READ_ARI DOUBLE,"
-					+ "EVAL_READ_LIAU DOUBLE,"
-					+ "EVAL_READ_FLESH DOUBLE,"
-					+ "EVAL_READ_FOG DOUBLE,"
-					+ "EVAL_READ_SMOG DOUBLE,"
-					
-					+ "BUG_ASSIGNEE varchar(255));");
+					+ "SUMMARY VARCHAR(512),"
+					+ "DESCRIPTION VARCHAR(99999));");
 			
-			System.out.println("---Initial BUG REPORT TABLE CREATED...");
+			System.out.println("--- BUG REPORT TABLE CREATED...");
 		}catch(Exception e)
 		{
-			System.out.println("---Initial BUG REPORT TABLE CREATION ERROR...");
+			System.err.println("---BUG REPORT TABLE CREATION ERROR...");
+		}
+		try
+		{
+			q.execute("Create Table META_FIELD("
+					+ "BUG_ID int PRIMARY KEY,"
+					+ "STATUS VARCHAR(128),"
+					+ "OPEN_DATE DATETIME,"			
+					+ "MODIFIED_DATE DATETIME,"
+					+ "BUG_REPORTER VARCHAR(255),"
+					+ "DOMAIN varchar(64),"
+					+ "PROJECT varchar(64),"
+					+ "COMPONENT varchar(128),"
+					+ "VERSION varchar(64),"
+					+ "HW varchar(64),"
+					+ "OS varchar(64),"						
+					+ "PRIORITY VARCHAR(64),"
+					+ "SEVERITY VARCHAR(64),"					
+					+ "ASSIGNEE varchar(255));");
+			
+			System.out.println("---META_FIELD TABLE CREATED...");
+		}catch(Exception e)
+		{
+			System.err.println("---META_FIELD TABLE CREATION ERROR...");
 		}
 		
 		try
 		{
-			q.execute("Create Table REPORTER_TOSSING("
-					+ "BUG_ID INT,"
-					+ "FIRST_ASSIGNEE VARCHAR(255),"
-					+ "TOSSED_ASSIGNEE VARCHAR(255),"
-					+ "TOSSING_DATE varchar(255));");
+			q.execute("Create Table HISTORY("
+					+ "BUG_ID int,"
+					+ "DATE DATETIME,"				
+					+ "FIELD VARCHAR(128),"
+					+ "PREV VARCHAR(128),"					
+					+ "POST varchar(128));");
 			
-			System.out.println("---Initial REPORTER_TOSSING TABLE CREATED...");
+			System.out.println("---HISTORY TABLE CREATED...");
 		}catch(Exception e)
 		{
-			System.out.println("---Initial REPORTER_TOSSING TABLE CREATION ERROR...");
+			System.err.println("---HISTORY TABLE CREATION ERROR...");
 		}
+		
+
+		try
+		{
+			q.execute("Create Table COMMENT("
+					+ "BUG_ID int,"
+					+ "NUM int,"
+					+ "REPORTER VARCHAR(255),"
+					+ "DATE DATETIME,"
+					+ "TEXT VARCHAR(99999));");
+			
+			System.out.println("---COMMENT TABLE COMMENT CREATED...");
+		}catch(Exception e)
+		{
+			System.err.println("---COMMENT TABLE COMMENT CREATION ERROR...");
+		}
+		
+		
+		
 	}
 	
-	public void dropTable() throws Exception
+	
+	private void dropTable(String domain, String project) throws Exception
 	{
-		Statement q = conn.createStatement();
-		q.execute("DELETE FROM INITIAL_BUG_REPORT;");
-		System.out.println("---DELETE INITIAL BUG REPORT TABLE...");
-		q.execute("DELETE FROM REPORTER_TOSSING;");
-		System.out.println("---DELETE INITIAL REPORTER_TOSSING TABLE...");
+		Statement q = connMap.get(domain+"-"+project).createStatement();
+		q.execute("DROP TABLE BUG_REPORT;");
+		System.out.println("---DROP BUG_REPORT TABLE...");
+		q.execute("DROP TABLE META_FIELD;");
+		System.out.println("---DROP META_FIELD TABLE...");
+		q.execute("DROP TABLE  HISTORY;");
+		System.out.println("---DROP HISTORY TABLE...");
+		q.execute("DROP TABLE COMMENT;");
+		System.out.println("---DROP COMMENT TABLE...");
 	}
+	
+
+	public void insertBugReport(BugReport b, BugReportMetaField mf) throws Exception
+	{
+		String key = mf.getDomain()+"-"+mf.getProduct();
+		ArrayList<Comment> cl = b.getCommentList();
+		ArrayList<History> hl = b.getHistoryList();
+		try
+		{
+			Statement q = connMap.get(key).createStatement();
+			q.execute("INSERT INTO BUG_REPORT VALUES ("+ b.getBugID() + ",'"+b.getSummary().replace("'", "")+"','"+b.getDescription().replace("'", "")+"');");
+			q.execute("INSERT INTO META_FIELD VALUES ("+ mf.getBugID()+",'"+mf.getStatus()+"','"+mf.getOpenDate()+"','"+mf.getModifiedDate()
+				+"','"+mf.getReporter()+"','"+mf.getDomain()+"','"+mf.getProduct()+"','"+mf.getComponent()+"','"+mf.getProductVer()+"','"+mf.getHardware()
+				+"','"+mf.getOs()+"','"+mf.getPriority()+"','"+mf.getSever()+"','"+mf.getAssignee()+"');");
+			for(int i = 0 ; i<cl.size(); i++)
+				q.execute("INSERT INTO COMMENT VALUES ("+b.getBugID()+","+cl.get(i).getNum()
+						+",'"+cl.get(i).getCommenter()+"','"+cl.get(i).getDate()+"','"+cl.get(i).getDescription().replace("'", "")+"');");
+			for(int i = 0 ; i<hl.size(); i++)
+				q.execute("INSERT INTO HISTORY VALUES ("+b.getBugID()+",'"+hl.get(i).getDate()
+						+"','"+hl.get(i).getField()+"','"+hl.get(i).getPrev()+"','"+hl.get(i).getPost()+"');");
 			
+		}
+		catch(Exception e1)
+		{
+			errorList.add(b.getBugID()+" "+e1.getMessage());
+			System.err.println(e1);
+		}
+	}	
+	
+	public void close(HashMap domainMap) throws SQLException{
+		Iterator iter =  domainMap.keySet().iterator();
+		while(iter.hasNext()){
+			String key = (String)iter.next();
+			String domain = (String) domainMap.get(key);
+			connMap.get(domain+"-"+key).close();
+			
+		}
+		System.out.println(errorList);
+	}
+	
+
+	
+		/*	
 	public void insertInitBugReport(BugReport b, EvaluatedMetrics e) throws Exception
 	{
 		try
@@ -133,5 +243,5 @@ public class DB {
 			conn.close();
 			System.out.println("---CONNECTION CLOSED...");
 		}
-	}
+	}*/
 }

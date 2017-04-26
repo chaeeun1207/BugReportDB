@@ -3,16 +3,17 @@ package common;
 public class History {
 
 	int bugID;
-	String date;
+	String date;	
+	String field;
+	String prev;
+	String post;
+	
 	public String getDate() {
 		return date;
 	}
 	public void setDate(String date) {
 		this.date = date;
 	}
-	String field;
-	String prev;
-	String post;
 	public int getBugID() {
 		return bugID;
 	}
