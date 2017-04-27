@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 
+import common.Attachment;
 import common.BugReport;
 import common.BugReportMetaField;
 import common.Comment;
@@ -97,8 +98,8 @@ public class DB {
 			q.execute("Create Table META_FIELD("
 					+ "BUG_ID int PRIMARY KEY,"
 					+ "STATUS VARCHAR(128),"
-					+ "OPEN_DATE DATETIME,"			
-					+ "MODIFIED_DATE DATETIME,"
+					+ "OPEN_DATE varchar(128),"			
+					+ "MODIFIED_DATE varchar(128),"
 					+ "BUG_REPORTER VARCHAR(255),"
 					+ "DOMAIN varchar(64),"
 					+ "PROJECT varchar(64),"
@@ -120,7 +121,7 @@ public class DB {
 		{
 			q.execute("Create Table HISTORY("
 					+ "BUG_ID int,"
-					+ "DATE DATETIME,"				
+					+ "DATE varchar(128),"				
 					+ "FIELD VARCHAR(128),"
 					+ "PREV VARCHAR(128),"					
 					+ "POST varchar(128));");
@@ -138,7 +139,7 @@ public class DB {
 					+ "BUG_ID int,"
 					+ "NUM int,"
 					+ "REPORTER VARCHAR(255),"
-					+ "DATE DATETIME,"
+					+ "DATE varchar(128),"
 					+ "TEXT VARCHAR(99999));");
 			
 			System.out.println("---COMMENT TABLE COMMENT CREATED...");
@@ -147,6 +148,22 @@ public class DB {
 			System.err.println("---COMMENT TABLE COMMENT CREATION ERROR...");
 		}
 		
+		try
+		{
+			q.execute("Create Table ATTACHMENT("
+					+ "BUG_ID int,"
+					+ "ATTACHER VARCHAR(128),"
+					+ "DATE VARCHAR(128),"
+					+ "ATTACH_ID int primary key,"
+					+ "TYPE varchar(128));");
+			
+			System.out.println("---COMMENT TABLE ATTACHMENT CREATED...");
+		}catch(Exception e)
+		{
+			System.err.println("---COMMENT TABLE ATTACHMENT CREATION ERROR...");
+		}
+		
+		
 		
 		
 	}
@@ -154,15 +171,22 @@ public class DB {
 	
 	private void dropTable(String domain, String project) throws Exception
 	{
-		Statement q = connMap.get(domain+"-"+project).createStatement();
-		q.execute("DROP TABLE BUG_REPORT;");
-		System.out.println("---DROP BUG_REPORT TABLE...");
-		q.execute("DROP TABLE META_FIELD;");
-		System.out.println("---DROP META_FIELD TABLE...");
-		q.execute("DROP TABLE  HISTORY;");
-		System.out.println("---DROP HISTORY TABLE...");
-		q.execute("DROP TABLE COMMENT;");
-		System.out.println("---DROP COMMENT TABLE...");
+		try{
+			Statement q = connMap.get(domain+"-"+project).createStatement();
+			q.execute("DROP TABLE BUG_REPORT;");
+			System.out.println("---DROP BUG_REPORT TABLE...");
+			q.execute("DROP TABLE META_FIELD;");
+			System.out.println("---DROP META_FIELD TABLE...");
+			q.execute("DROP TABLE  HISTORY;");
+			System.out.println("---DROP HISTORY TABLE...");
+			q.execute("DROP TABLE COMMENT;");
+			System.out.println("---DROP COMMENT TABLE...");
+			q.execute("DROP TABLE ATTACHMENT;");
+			System.out.println("---DROP ATTACHMENT TABLE...");
+		}catch(Exception e){
+			System.err.println("DROP TABLE ERROR "+domain+"-"+project);
+		}
+		
 	}
 	
 
@@ -202,6 +226,21 @@ public class DB {
 			
 		}
 		System.out.println(errorList);
+	}
+
+	public void insertAttachment(Attachment att, String key) {
+		try
+		{
+			Statement q = connMap.get(key.split("-",2)[1]).createStatement();
+			q.execute("INSERT INTO ATTACHMENT VALUES ("+ att.getBugID() + ",'"+att.getAttacher().replace("'", "")+"','"+att.getDate()+"',"
+				+att.getAttachID()+",'"+att.getType()+"');");			
+			
+		}
+		catch(Exception e1)
+		{
+			errorList.add(att.getBugID()+" "+e1.getMessage());
+			System.err.println(e1);
+		}
 	}
 	
 
