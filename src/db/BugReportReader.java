@@ -44,8 +44,9 @@ public class BugReportReader {
 			domainSet.add(domain);
 		}
 //		
-//		DB db = new DB(domainMap);
-		DB db = new DB(domainMap,true);
+//		DB db = new DB(domainMap);	// Just Clean Table
+		DB db = new DB(domainMap,1); // Just Drop Attachment Table
+//		DB db = new DB(domainMap,true); // Just All Table Dropping
 //		
 		// 50,000 Bug Report Analysis
 		int totalNum = 0;
@@ -90,7 +91,7 @@ public class BugReportReader {
 						}
 						
 						//1. Read Meta Field Data
-						if(str.contains("<th>Summary:</th>")){
+						/*if(str.contains("<th>Summary:</th>")){
 							bugReport.setSummary(br.readLine().replace("<td colspan=\"3\">", "").replace("</td>", ""));
 						}
 						if(str.contains("<th>Product:</th>")){
@@ -401,7 +402,7 @@ public class BugReportReader {
 								data = data.split("@")[0];
 							history.setPost(data);
 							historyList.add(history);
-						}
+						}*/
 					}
 					if(attachIDList.size()!=0){
 						System.out.println(bugID+" ATTACH SIZE: "+attachIDList.size());
@@ -411,14 +412,14 @@ public class BugReportReader {
 		//			System.out.println(bugReport);
 		//			System.out.println(metaField);
 					if(!fail){
-						bugReport.setCommentList(commentList);
-						bugReport.setHistoryList(historyList);
+						/*bugReport.setCommentList(commentList);
+						bugReport.setHistoryList(historyList);*/
 						//bugReportList.add(bugReport);				
 						//metaFieldList.add(metaField);
 						totalNum++;
 						//System.out.println((i+1.0)/files.length+ " "+commentList.size()+" "+historyList.size()+ " "+metaFieldList.size()+" "+bugReportList.size());
 						System.out.println((i+1.0)/files.length+ " "+commentList.size()+" "+historyList.size()+ " "+totalNum+" "+attachIDMap.size());
-						db.insertBugReport(bugReport, metaField);
+//						db.insertBugReport(bugReport, metaField);
 						
 					}else
 						System.out.println();
@@ -439,6 +440,7 @@ public class BugReportReader {
 			int bugID = Integer.parseInt(key.split("-")[0]);
 			ArrayList<Integer> attachList = attachIDMap.get(key);
 			System.out.println(num/attachIDMap.size()+" : "+bugID+" "+attachList.size());
+			double progress = num/attachIDMap.size();
 			num++;
 			for(int i = 0 ; i<attachList.size(); i++){				
 				try{
@@ -446,9 +448,8 @@ public class BugReportReader {
 					attachment.setBugID(bugID);
 					attachment.setAttachID(attachList.get(i));
 					int attachID = attachList.get(i);
-					
 					doc = Jsoup.connect(attachURL+attachID).maxBodySize(0).timeout(10000).get();
-					Elements attachments = doc.select("div.details");
+					Elements attachments = doc.select("div.details");					
 					
 					String type = attachments.html();		
 					type = type.substring(0,type.indexOf("<"));
@@ -461,19 +462,21 @@ public class BugReportReader {
 					String date = attachments.html();
 					date = date.substring(date.lastIndexOf("</span>"),date.length());
 					date = date.replace("on", " ").replace("EDT", "").replace("EST", "").replace("</span>", "").replace("  ", "");
-					attachment.setType(date);
-					//System.out.println(date);;
+					attachment.setDate(date);
+					System.out.println(date);
 					
 					attachments = doc.select("div.details span.vcard span.fn");
 					String attacher = attachments.text();
 					if(attacher.contains("@"))
 						attacher = attacher.split("@")[0];
-					attachment.setAttacher(attacher.toLowerCase().replace(" ", "").replace("'", "").replace("-", "").replace("_", ""));
-					//System.out.println(attacher.toLowerCase().replace(" ", "").replace("'", "").replace("-", "").replace("_", ""));;
+					attacher = attacher.toLowerCase().replace(" ", "").replace("'", "").replace("-", "").replace("_", "");
+					attachment.setAttacher(attacher);
+					System.out.println(attachID+" "+type+" "+date+" "+attacher);
 					db.insertAttachment(attachment, key);					
 					
 				}catch(Exception e){
 					e.printStackTrace();
+					System.out.println(e);
 				}
 			}
 			

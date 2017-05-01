@@ -65,6 +65,47 @@ public class DB {
 		return connMap.get(domain+"-"+project);
 	}*/
 
+	public DB(HashMap<String, String> domainMap, int i) throws Exception {
+		Class.forName("org.h2.Driver");
+		Iterator iter = domainMap.keySet().iterator();
+		while(iter.hasNext()){
+			String project = (String) iter.next();
+			String domain = domainMap.get(project);
+			Connection conn = DriverManager.getConnection("jdbc:h2:./DB/"+domain+"/"+project,"sa","");
+			System.out.println("-------- CONNECT WITH "+domain+" "+project+" DB ----------");;
+			connMap.put(domain+"-"+project, conn);
+			cleanAttachTable(domain,project);		
+
+			try
+			{
+				Statement q = connMap.get(domain+"-"+project).createStatement();
+				q.execute("Create Table ATTACHMENT("
+						+ "BUG_ID int,"
+						+ "ATTACHER VARCHAR(128),"
+						+ "DATE VARCHAR(128),"
+						+ "ATTACH_ID int primary key,"
+						+ "TYPE varchar(128));");
+				
+				System.out.println("---COMMENT TABLE ATTACHMENT CREATED...");
+			}catch(Exception e)
+			{
+				System.err.println("---COMMENT TABLE ATTACHMENT CREATION ERROR...");
+			}
+			
+		}
+	}
+
+	private void cleanAttachTable(String domain, String project) throws SQLException {
+		try{
+			Statement q = connMap.get(domain+"-"+project).createStatement();
+			q.execute("DROP TABLE ATTACHMENT;");
+			System.out.println("---DROP ATTACHMENT TABLE...");
+		}catch(Exception e){
+			System.err.println("ATTACHTMENT DROP ERROR");
+		}
+		
+	}
+
 	private void cleanTable(String domain, String project) throws SQLException {
 		Statement q = connMap.get(domain+"-"+project).createStatement();
 		q.execute("DELETE FROM BUG_REPORT;");
@@ -232,8 +273,8 @@ public class DB {
 		try
 		{
 			Statement q = connMap.get(key.split("-",2)[1]).createStatement();
-			q.execute("INSERT INTO ATTACHMENT VALUES ("+ att.getBugID() + ",'"+att.getAttacher().replace("'", "")+"','"+att.getDate()+"',"
-				+att.getAttachID()+",'"+att.getType()+"');");			
+			System.out.println(q.execute("INSERT INTO ATTACHMENT VALUES ("+ att.getBugID() + ",'"+att.getAttacher().replace("'", "")+"','"+att.getDate()+"',"
+				+att.getAttachID()+",'"+att.getType()+"');"));			
 			
 		}
 		catch(Exception e1)
