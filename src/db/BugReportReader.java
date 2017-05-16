@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -18,6 +20,7 @@ import common.BugReport;
 import common.BugReportMetaField;
 import common.Comment;
 import common.History;
+import cuezilla.BugReportEvalByCUEZILLA;
 
 public class BugReportReader {
 
@@ -45,8 +48,8 @@ public class BugReportReader {
 		}
 //		
 //		DB db = new DB(domainMap);	// Just Clean Table
-		DB db = new DB(domainMap,1); // Just Drop Attachment Table
-//		DB db = new DB(domainMap,true); // Just All Table Dropping
+//		DB db = new DB(domainMap,1); // Just Drop Attachment Table
+		DB db = new DB(domainMap,true); // Just All Table Dropping
 //		
 		// 50,000 Bug Report Analysis
 		int totalNum = 0;
@@ -56,12 +59,13 @@ public class BugReportReader {
 		ArrayList<BugReportMetaField> metaFieldList = new ArrayList<BugReportMetaField>();
 		HashMap<String, ArrayList<Integer>> attachIDMap = new HashMap<String, ArrayList<Integer>>(); 
 		for(int a = 0; a<filePath.length; a++){
+//		for(int a = 0; a<1; a++){
 			File directory = new File(filePath[a]);
 			
 			File[] files = directory.listFiles();
 			
-			//for(int i = 0 ; i<files.length; i++){
-			for(int i =0 ; i<files.length; i++){
+			for(int i = 0 ; i<files.length; i++){
+//			for(int i =0 ; i<50; i++){ // for debugging
 				try{				
 					System.out.print(files[i].getName()+"\t");
 					BugReport bugReport = new BugReport();			
@@ -80,6 +84,8 @@ public class BugReportReader {
 					
 					br = new BufferedReader(new FileReader(files[i]));
 					while((str=br.readLine()) != null){
+						String fullAssignee = "";
+						String abbAssignee = "";
 						if(str.contains("Bug #"+bugID+" does not exist.")){
 							fail = true;
 							break;
@@ -91,7 +97,7 @@ public class BugReportReader {
 						}
 						
 						//1. Read Meta Field Data
-						/*if(str.contains("<th>Summary:</th>")){
+						if(str.contains("<th>Summary:</th>")){
 							bugReport.setSummary(br.readLine().replace("<td colspan=\"3\">", "").replace("</td>", ""));
 						}
 						if(str.contains("<th>Product:</th>")){
@@ -109,18 +115,23 @@ public class BugReportReader {
 								reporter = reporter.replace("-", "").replace("_","");
 							if(reporter.contains("@"))
 								reporter = reporter.split("@")[0];
-							metaField.setReporter(reporter.replace("<td>", "").replace("</td>", "").replace("'", "").replace(" ", "").replace("\\.", "").toLowerCase());
+							if(reporter.contains("?"))
+								reporter = reporter.replaceAll("?", "");
+							metaField.setReporter(reporter.replaceAll("<td>", "").replaceAll("</td>", "").replaceAll("'", "").replaceAll(" ", "").replaceAll("\\.", "").toLowerCase());
 						}
 						if(str.contains("<th>Component:</th>")){
-							metaField.setComponent(br.readLine().split("</td>")[0].replace("<td>", "").replace(" ", "").toLowerCase());
+							metaField.setComponent(br.readLine().split("</td>")[0].replaceAll("<td>", "").replaceAll(" ", "").toLowerCase());
 							String assignee = br.readLine();
 							if(assignee.contains("&lt;"))
-								assignee = assignee.substring(0, assignee.indexOf("&lt;")).replace("'", "").replace("-", "").replace("_","");
+								assignee = assignee.substring(0, assignee.indexOf("&lt;")).replaceAll("'", "").replaceAll("-", "").replaceAll("_","");
 							else
-								assignee = assignee.replace("@", "").replace("-", "").replace("_","");
+								assignee = assignee.replaceAll("@", "").replaceAll("-", "").replaceAll("_","");
 							if(assignee.contains("@"))
 								assignee = assignee.split("@")[0];
+							if(assignee.contains("?"))
+								assignee = assignee.replaceAll("?", "");
 							metaField.setAssignee(assignee.replace("<td>", "").replace("</td>", "").toLowerCase().replace(" ", "").replace("\\.", ""));
+							fullAssignee = metaField.getAssignee();
 						}
 						String status="";
 						if(str.contains("<th>Status:</th>")){
@@ -151,7 +162,7 @@ public class BugReportReader {
 								ccs = ccs.substring(ccs.indexOf(">")+1);
 								ArrayList<String> ccList = new ArrayList<String>();
 								Collections.addAll(ccList, ccs.split(","));
-								metaField.setCcList((ArrayList<String>) ccList.clone());
+//								metaField.setCcList((ArrayList<String>) ccList.clone());
 							}
 						}
 						if(str.contains("<th>Version:</th>")){
@@ -402,24 +413,31 @@ public class BugReportReader {
 								data = data.split("@")[0];
 							history.setPost(data);
 							historyList.add(history);
-						}*/
+							
+							abbAssignee = data;
+						}
+						
+						// 5. Mapping FullName & AbbName
+						if(!abbAssignee.equals("")){
+							db.insertNameMap(fullAssignee, abbAssignee, metaField.getDomain()+"-"+metaField.getProduct());
+						}
 					}
 					if(attachIDList.size()!=0){
-						System.out.println(bugID+" ATTACH SIZE: "+attachIDList.size());
+						System.out.println(bugID+"-"+metaField.getDomain()+"-"+metaField.getProduct()+" ATTACH SIZE: "+attachIDList.size());
 						attachIDMap.put(bugID+"-"+metaField.getDomain()+"-"+metaField.getProduct(),attachIDList);
 					}
 					metaField.setModifiedDate(recentHistoryDate);
 		//			System.out.println(bugReport);
 		//			System.out.println(metaField);
 					if(!fail){
-						/*bugReport.setCommentList(commentList);
-						bugReport.setHistoryList(historyList);*/
-						//bugReportList.add(bugReport);				
-						//metaFieldList.add(metaField);
+						bugReport.setCommentList(commentList);
+						bugReport.setHistoryList(historyList);
+						bugReportList.add(bugReport);				
+						metaFieldList.add(metaField);
 						totalNum++;
 						//System.out.println((i+1.0)/files.length+ " "+commentList.size()+" "+historyList.size()+ " "+metaFieldList.size()+" "+bugReportList.size());
 						System.out.println((i+1.0)/files.length+ " "+commentList.size()+" "+historyList.size()+ " "+totalNum+" "+attachIDMap.size());
-//						db.insertBugReport(bugReport, metaField);
+						db.insertBugReport(bugReport, metaField);
 						
 					}else
 						System.out.println();
@@ -453,17 +471,87 @@ public class BugReportReader {
 					
 					String type = attachments.html();		
 					type = type.substring(0,type.indexOf("<"));
+					
+					int codeEx = 0;
+					// Is it code example?
+//					System.out.println(type);
+					if(type.toLowerCase().contains(".cpp") || type.toLowerCase().contains(".c ") || type.toLowerCase().contains(".java"))
+						codeEx = 1;					
+										
 					type = type.substring(type.lastIndexOf("("), type.length());
 					type = type.substring(0,type.indexOf(","));					
 					type = type.replace("(", "").replace(")","");
+//					System.out.println(type);
+					
+					if(type.toLowerCase().contains("text")){
+						String textContent = doc.select("textarea[name*=comment]").toString();
+						textContent.replaceAll("<textarea name=\"comment\" id=\"editFrame\" class=\"bz_default_hidden\" wrap=\"soft\" disabled rows=\"10\" cols=\"80\">", "");
+						textContent.replaceAll("&gt; ", "");
+						
+						// A. Is it Patch?
+						int start = -1;
+						int end = 0;
+						String[] itemizedDesc = textContent.split("\n");
+						for(int j = 0; j<itemizedDesc.length; j++){
+							String item = itemizedDesc[j];				
+							if(start == -1 && item.toLowerCase().contains("index:")){
+								if(j+2<itemizedDesc.length && itemizedDesc[j+2].toLowerCase().contains("==="))
+									start = j;
+							}else if(start == -1 && item.toLowerCase().contains("rcs")){
+								if(j+1<itemizedDesc.length && itemizedDesc[j+1].toLowerCase().contains("file:"))
+									start = j;
+							}else if(start == -1 && item.toLowerCase().contains("---")){
+								if(j+1<itemizedDesc.length && itemizedDesc[j+1].toLowerCase().contains("+++"))
+									start = j;
+							}else if(start == -1 && item.toLowerCase().contains("diff")){
+								if(j+1<itemizedDesc.length && itemizedDesc[j+1].toLowerCase().contains("-"))
+									start = j;
+							}
+							
+							if(start > -1 && item.equals("+}")){
+								end = j;
+							}else if(start > -1){
+								if(j+1<itemizedDesc.length && item.contains("+") && itemizedDesc[j+1].contains(";")){
+									end = j;
+								}
+							}else if(start > -1 && item.equals("-}")){
+								end = j;
+							}else if(start > -1){
+								if(j+1<itemizedDesc.length && item.contains("-") && itemizedDesc[j+1].contains(";"))
+										end = j;
+							}
+							//System.out.println(bug.getID()+" "+j+" "+start+" "+end +" " +item);
+						}
+						if(end > 0)
+							type = type+ "-patch";
+						
+						// B. Is it Stack Trace?						
+						String stackTrace ="";
+					    String tracePattern = "(([a-zA-Z0-9_\\-$]*\\.)*[a-zA-Z_<][a-zA-Z0-9_\\-$>]*" +
+					        		"[a-zA-Z_<(][a-zA-Z0-9_\\-$>);/\\[]*" +
+					        		"\\(([a-zA-Z_][a-zA-Z0-9_\\-]*\\.java:[0-9]*|[a-zA-Z_][a-zA-Z0-9_\\-]*\\.java\\((?i)inlined compiled code\\)|[a-zA-Z_][a-zA-Z0-9_\\-]*\\.java\\((?i)compiled code\\)|(?i)native method|(?i)unknown source)\\))";
+					        
+					    Pattern r = Pattern.compile(tracePattern);
+					    Matcher m = r.matcher(textContent);		    
+				        while (m.find()) {
+				        	String group = m.group();
+				        	stackTrace =  stackTrace+"\n"+group;
+				        	textContent = textContent.replace(group, "");
+				        	if(!type.contains("stacktrace"))
+				        		type = type + "-stacktrace";
+				        }			        
+				        
+				        // C. Is it code example?
+				        if(codeEx==1)
+				        	type = type + "-code";
+				   }
 					attachment.setType(type);
-					System.out.println(type);
 					
 					String date = attachments.html();
 					date = date.substring(date.lastIndexOf("</span>"),date.length());
 					date = date.replace("on", " ").replace("EDT", "").replace("EST", "").replace("</span>", "").replace("  ", "");
 					attachment.setDate(date);
-					System.out.println(date);
+//					System.out.println(date);
 					
 					attachments = doc.select("div.details span.vcard span.fn");
 					String attacher = attachments.text();
@@ -478,9 +566,12 @@ public class BugReportReader {
 					e.printStackTrace();
 					System.out.println(e);
 				}
-			}
-			
-			
+			}		
 		}
+		
+		
+		BugReportEvalByCUEZILLA cuezilla = new BugReportEvalByCUEZILLA();
+		
+		cuezilla.extract();
 	}
 }

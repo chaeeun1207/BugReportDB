@@ -30,7 +30,10 @@ public class BugReport {
 		return description;
 	}
 	public void setDescription(String descrliption) {
-		this.description = descrliption.replace("'", ".");
+		String desc = descrliption.replace("'", ".");
+		if(desc.length()>99999)
+			desc = desc.substring(0,99999);
+		this.description = desc;
 	}
 	public String getSummary() {
 		return summary;

@@ -1,22 +1,31 @@
 package db;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 
 import common.Attachment;
 import common.BugReport;
 import common.BugReportMetaField;
+import common.CUEZILLA;
 import common.Comment;
 import common.History;
 
 public class DB {
 	static public HashMap<String, Connection> connMap = new HashMap<String, Connection>();;
 	static public ArrayList<String> errorList = new ArrayList<String>();
+	
+	public DB(String domain, String project) throws Exception
+	{
+		Class.forName("org.h2.Driver");
+		Connection conn = DriverManager.getConnection("jdbc:h2:./DB/"+domain+"/"+project,"sa","");
+		System.out.println("-------- CONNECT WITH "+domain+" "+project+" DB ----------");;
+		connMap.put(domain+"-"+project, conn);
+	}		
 	
 	DB(HashMap<String, String> domainMap) throws Exception
 	{
@@ -204,7 +213,39 @@ public class DB {
 			System.err.println("---COMMENT TABLE ATTACHMENT CREATION ERROR...");
 		}
 		
+		try
+		{
+			q.execute("Create Table CUEZILLA("
+					+ "BUG_ID int primary key,"
+					+ "itemization int,"
+					+ "actionKeyword int,"
+					+ "resultKeyword int,"
+					+ "stepKeyword int,"
+					+ "buildKeyword int,"
+					+ "uiKeyword int,"
+					+ "keywordScore double,"
+					+ "codeExample int,"
+					+ "patch int,"
+					+ "stackTrace int,"
+					+ "screenShot int);");
+			
+			System.out.println("---COMMENT TABLE CUEZILLA CREATED...");
+		}catch(Exception e)
+		{
+			System.err.println("---COMMENT TABLE CUEZILLA CREATION ERROR...");
+		}
 		
+		try
+		{
+			q.execute("Create Table NAME_MAP("
+					+ "FULL_NAME varchar(128),"
+					+ "ABB_NAME varchar(128));");
+			
+			System.out.println("---COMMENT TABLE NAME_MAP CREATED...");
+		}catch(Exception e)
+		{
+			System.err.println("---COMMENT TABLE NAME_MAP CREATION ERROR...");
+		}
 		
 		
 	}
@@ -224,6 +265,10 @@ public class DB {
 			System.out.println("---DROP COMMENT TABLE...");
 			q.execute("DROP TABLE ATTACHMENT;");
 			System.out.println("---DROP ATTACHMENT TABLE...");
+			q.execute("DROP TABLE CUEZILLA;");
+			System.out.println("---DROP CUEZILLA TABLE...");
+			q.execute("DROP TABLE NAME_MAP;");
+			System.out.println("---DROP NAME_MAP TABLE...");
 		}catch(Exception e){
 			System.err.println("DROP TABLE ERROR "+domain+"-"+project);
 		}
@@ -258,6 +303,44 @@ public class DB {
 		}
 	}	
 	
+	public void insertCuezilla(CUEZILLA c) throws Exception
+	{
+
+		String key = c.getDomain()+"-"+c.getProject();
+		try
+		{
+			Statement q = connMap.get(key).createStatement();
+			q.execute("INSERT INTO CUEZILLA VALUES ("+ c.getBugID()+","+c.getItemization()+","+c.getActionKeyword()+","+c.getResultKeyword()
+				+","+c.getStepKeyword()+","+c.getBuildKeyword()+","+c.getUiKeyword()+","+c.getKeywordScore()+","+c.getCodeExample()+","+c.getPatch()
+				+","+c.getStackTrace()+","+c.getScreenShot()+");");
+			
+			
+		}
+		catch(Exception e1)
+		{
+			errorList.add(c.getBugID()+" "+e1.getMessage());
+			System.err.println(e1);
+		}
+	}	
+	
+	public void insertNameMap(String fullName, String abbName, String key) throws Exception
+	{
+
+		try
+		{
+			Statement q = connMap.get(key).createStatement();
+			ResultSet rs = q.executeQuery("SELECT * FROM NAME_MAP WHERE FULL_NAME = '"+fullName+"' AND ABB_NAME = '"+abbName+"';");
+			if(!rs.next())
+				q.execute("INSERT INTO NAME_MAP VALUES ('"+fullName+"','"+abbName+"');");
+			
+			
+		}
+		catch(Exception e1)
+		{
+			System.err.println(e1);
+		}
+	}	
+	
 	public void close(HashMap domainMap) throws SQLException{
 		Iterator iter =  domainMap.keySet().iterator();
 		while(iter.hasNext()){
@@ -282,6 +365,11 @@ public class DB {
 			errorList.add(att.getBugID()+" "+e1.getMessage());
 			System.err.println(e1);
 		}
+	}
+
+	public void close(String domain, String project) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 
