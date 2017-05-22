@@ -41,15 +41,16 @@ public class BugReportReader {
 		HashSet<String> domainSet = new HashSet<String>();
 		while((str = br.readLine())!= null){
 			String domain = str.split(",")[0].toLowerCase();
-			String project= str.split(",")[1].replace("?", "").toLowerCase();
+			String project= str.split(",")[1].toLowerCase().replace("?", "");
 		
 			domainMap.put(project, domain);
 			domainSet.add(domain);
 		}
 //		
 //		DB db = new DB(domainMap);	// Just Clean Table
-//		DB db = new DB(domainMap,1); // Just Drop Attachment Table
+	//	DB db = new DB(domainMap,1); // Just Drop Attachment Table
 		DB db = new DB(domainMap,true); // Just All Table Dropping
+//	DB db = new DB();				// Just Open Connection
 //		
 		// 50,000 Bug Report Analysis
 		int totalNum = 0;
@@ -58,8 +59,8 @@ public class BugReportReader {
 		ArrayList<BugReport> bugReportList = new ArrayList<BugReport>();
 		ArrayList<BugReportMetaField> metaFieldList = new ArrayList<BugReportMetaField>();
 		HashMap<String, ArrayList<Integer>> attachIDMap = new HashMap<String, ArrayList<Integer>>(); 
-		for(int a = 0; a<filePath.length; a++){
-//		for(int a = 0; a<1; a++){
+		//for(int a = 0; a<4; a++){
+		for(int a = 0; a<3; a++){
 			File directory = new File(filePath[a]);
 			
 			File[] files = directory.listFiles();
@@ -81,31 +82,50 @@ public class BugReportReader {
 					int bugID = Integer.parseInt(files[i].getName().split("\\.")[0]);
 					boolean fail = false;
 					String recentHistoryDate = "";
+					String fullAssignee = "";
+					String abbAssignee = "";
 					
 					br = new BufferedReader(new FileReader(files[i]));
 					while((str=br.readLine()) != null){
-						String fullAssignee = "";
-						String abbAssignee = "";
 						if(str.contains("Bug #"+bugID+" does not exist.")){
 							fail = true;
 							break;
 						}
 						if(str.contains("https://bugs.eclipse.org/bugs/attachment ")){
 							String attachStr = str.split("https://bugs.eclipse.org/bugs/attachment ")[1];
-							attachStr = attachStr.substring(0, attachStr.indexOf("<"));
-							attachIDList.add(Integer.parseInt(attachStr));
+							if(attachStr.contains("</a")){
+								attachStr = attachStr.substring(0, attachStr.indexOf("</a"));
+								attachIDList.add(Integer.parseInt(attachStr));
+							}
 						}
 						
 						//1. Read Meta Field Data
 						if(str.contains("<th>Summary:</th>")){
 							bugReport.setSummary(br.readLine().replace("<td colspan=\"3\">", "").replace("</td>", ""));
 						}
-						if(str.contains("<th>Product:</th>")){
-							br.readLine();
-							String product = br.readLine().replace("<td>", "").replace("</td>", "");
-							product = product.substring(product.indexOf("]")+2).toLowerCase();
+						if(str.contains("<th>Product:</th>")){							
+							String product = br.readLine();
+							if(!product.contains("z_Archived") && !product.contains("Community"))
+								product = br.readLine().replace("<td>", "").replace("</td>", "");
+							else
+								product = product.replace("<td>", "").replace("</td>", "");
+							if(product.contains("]"))
+								product = product.substring(product.indexOf("]")+2);
+							product = product.toLowerCase().replace("?", "");
+							product = product.toLowerCase().replace(" ", "");
+							product = product.toLowerCase().replace("-", "");
 							metaField.setProduct(product);
-							metaField.setDomain(domainMap.get(metaField.getProduct().replace("?", "")));
+							String domain = "";
+							if(product.equals("gmt")){
+								product = "z_archived";
+							}else
+								domain = domainMap.get(product);
+							metaField.setDomain(domain);
+//							System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"+domain+" - "+product);
+							if(domain.equals("") || product.equals("")){
+								System.err.print("ERROR ABOUT PARSING PRODUCT & DOMAIN"+" "+bugID+" "+domain+"-"+product);
+								continue;
+							}
 						}
 						if(str.contains("<th class=\"rightcell\">Reporter:</th>")){
 							String reporter = br.readLine();
@@ -415,13 +435,15 @@ public class BugReportReader {
 							historyList.add(history);
 							
 							abbAssignee = data;
-						}
-						
-						// 5. Mapping FullName & AbbName
-						if(!abbAssignee.equals("")){
-							db.insertNameMap(fullAssignee, abbAssignee, metaField.getDomain()+"-"+metaField.getProduct());
-						}
+						}		
 					}
+
+					// 5. Mapping FullName & AbbName
+					if(!abbAssignee.equals("") && !fullAssignee.equals("")){
+						db.insertNameMap(fullAssignee, abbAssignee, metaField.getDomain()+"-"+metaField.getProduct());
+					}
+					
+					//6. Attachment
 					if(attachIDList.size()!=0){
 						System.out.println(bugID+"-"+metaField.getDomain()+"-"+metaField.getProduct()+" ATTACH SIZE: "+attachIDList.size());
 						attachIDMap.put(bugID+"-"+metaField.getDomain()+"-"+metaField.getProduct(),attachIDList);
@@ -441,9 +463,9 @@ public class BugReportReader {
 						
 					}else
 						System.out.println();
-	
+					System.out.println();
 				}catch(Exception e){
-					System.err.println(e.getMessage());
+					e.printStackTrace();
 				}
 			}			
 		}
@@ -457,7 +479,7 @@ public class BugReportReader {
 			String key = iter.next();
 			int bugID = Integer.parseInt(key.split("-")[0]);
 			ArrayList<Integer> attachList = attachIDMap.get(key);
-			System.out.println(num/attachIDMap.size()+" : "+bugID+" "+attachList.size());
+			System.out.print(num/attachIDMap.size()+" : "+bugID+" "+attachList.size()+" ");
 			double progress = num/attachIDMap.size();
 			num++;
 			for(int i = 0 ; i<attachList.size(); i++){				
@@ -466,6 +488,7 @@ public class BugReportReader {
 					attachment.setBugID(bugID);
 					attachment.setAttachID(attachList.get(i));
 					int attachID = attachList.get(i);
+					System.out.print(" "+attachID+" ");
 					doc = Jsoup.connect(attachURL+attachID).maxBodySize(0).timeout(10000).get();
 					Elements attachments = doc.select("div.details");					
 					
@@ -487,8 +510,10 @@ public class BugReportReader {
 						String textContent = doc.select("textarea[name*=comment]").toString();
 						textContent.replaceAll("<textarea name=\"comment\" id=\"editFrame\" class=\"bz_default_hidden\" wrap=\"soft\" disabled rows=\"10\" cols=\"80\">", "");
 						textContent.replaceAll("&gt; ", "");
+						if(textContent.length()>99999)
+							textContent = textContent.substring(0, 99999);
 						
-						// A. Is it Patch?
+						// A. Is it Patch?						
 						int start = -1;
 						int end = 0;
 						String[] itemizedDesc = textContent.split("\n");
@@ -525,6 +550,7 @@ public class BugReportReader {
 						if(end > 0)
 							type = type+ "-patch";
 						
+						System.out.print("PATCH FINISH ");
 						// B. Is it Stack Trace?						
 						String stackTrace ="";
 					    String tracePattern = "(([a-zA-Z0-9_\\-$]*\\.)*[a-zA-Z_<][a-zA-Z0-9_\\-$>]*" +
@@ -538,12 +564,14 @@ public class BugReportReader {
 				        	stackTrace =  stackTrace+"\n"+group;
 				        	textContent = textContent.replace(group, "");
 				        	if(!type.contains("stacktrace"))
-				        		type = type + "-stacktrace";
+				        		type = type + "-stacktrace";break;
 				        }			        
-				        
+
+						System.out.print("STRACE FINISH ");
 				        // C. Is it code example?
 				        if(codeEx==1)
 				        	type = type + "-code";
+						System.out.print("CODE");
 				   }
 					attachment.setType(type);
 					
@@ -559,7 +587,7 @@ public class BugReportReader {
 						attacher = attacher.split("@")[0];
 					attacher = attacher.toLowerCase().replace(" ", "").replace("'", "").replace("-", "").replace("_", "");
 					attachment.setAttacher(attacher);
-					System.out.println(attachID+" "+type+" "+date+" "+attacher);
+					System.out.println(attachID+" "+type+" "+date+" "+attacher+" "+key);
 					db.insertAttachment(attachment, key);					
 					
 				}catch(Exception e){

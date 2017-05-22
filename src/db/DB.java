@@ -1,4 +1,6 @@
 package db;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -18,6 +20,26 @@ import common.History;
 public class DB {
 	static public HashMap<String, Connection> connMap = new HashMap<String, Connection>();;
 	static public ArrayList<String> errorList = new ArrayList<String>();
+	
+	
+	public DB() throws Exception
+	{
+		Class.forName("org.h2.Driver");
+		BufferedReader br = new BufferedReader(new FileReader("./data/domain.csv"));
+		String str;
+		while((str=br.readLine())!= null){
+			String[] line = str.split(",");
+			System.out.println(line[0] +" "+line[1].replace("?", ""));
+			String domain = line[0];
+			String project = line[1].replace("?", "");
+
+			Connection conn = DriverManager.getConnection("jdbc:h2:./DB/"+domain+"/"+project,"sa","");
+			System.out.println("-------- CONNECT WITH "+domain+" "+project+" DB ----------");;
+
+			connMap.put(domain.toLowerCase()+"-"+project.toLowerCase(), conn);
+			
+		}
+	}
 	
 	public DB(String domain, String project) throws Exception
 	{
@@ -95,10 +117,10 @@ public class DB {
 						+ "ATTACH_ID int primary key,"
 						+ "TYPE varchar(128));");
 				
-				System.out.println("---COMMENT TABLE ATTACHMENT CREATED...");
+				System.out.println("---CREATE TABLE ATTACHMENT CREATED...");
 			}catch(Exception e)
 			{
-				System.err.println("---COMMENT TABLE ATTACHMENT CREATION ERROR...");
+				System.err.println("---CREATE TABLE ATTACHMENT CREATION ERROR...");
 			}
 			
 		}
@@ -299,7 +321,8 @@ public class DB {
 		catch(Exception e1)
 		{
 			errorList.add(b.getBugID()+" "+e1.getMessage());
-			System.err.println(e1);
+			System.out.print(key+" ");
+			e1.printStackTrace();			
 		}
 	}	
 	
@@ -319,7 +342,7 @@ public class DB {
 		catch(Exception e1)
 		{
 			errorList.add(c.getBugID()+" "+e1.getMessage());
-			System.err.println(e1);
+			e1.printStackTrace();
 		}
 	}	
 	
@@ -337,7 +360,7 @@ public class DB {
 		}
 		catch(Exception e1)
 		{
-			System.err.println(e1);
+			e1.printStackTrace();
 		}
 	}	
 	
@@ -356,14 +379,18 @@ public class DB {
 		try
 		{
 			Statement q = connMap.get(key.split("-",2)[1]).createStatement();
-			System.out.println(q.execute("INSERT INTO ATTACHMENT VALUES ("+ att.getBugID() + ",'"+att.getAttacher().replace("'", "")+"','"+att.getDate()+"',"
-				+att.getAttachID()+",'"+att.getType()+"');"));			
+			ResultSet rs = q.executeQuery("SELECT * FROM ATTACHMENT WHERE ATTACH_ID = "+att.getAttachID()+";");
+			if(!rs.next()){
+				q = connMap.get(key.split("-",2)[1]).createStatement();
+				System.out.println(q.execute("INSERT INTO ATTACHMENT VALUES ("+ att.getBugID() + ",'"+att.getAttacher().replace("'", "")+"','"+att.getDate()+"',"
+						+att.getAttachID()+",'"+att.getType()+"');"));
+			}
 			
 		}
 		catch(Exception e1)
 		{
 			errorList.add(att.getBugID()+" "+e1.getMessage());
-			System.err.println(e1);
+			e1.printStackTrace();
 		}
 	}
 
