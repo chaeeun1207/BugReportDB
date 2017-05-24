@@ -250,7 +250,7 @@ public class BugReportEvalByCUEZILLA {
 				for(int j = 0; j<descriptionWords.length; j++){
 					if(keyActionScore == 0){
 						for(int k = 0; k<actionKeywords.length; k++){
-							if(descriptionWords[j].equals(actionKeywords[k])){
+							if(descriptionWords[j].toLowerCase().equals(actionKeywords[k].toLowerCase())){
 								keyActionScore = 1;
 								break;
 							}						
@@ -258,7 +258,7 @@ public class BugReportEvalByCUEZILLA {
 					}
 					if(keyResultScore == 0){
 						for(int k = 0; k<resultKeywords.length; k++){
-							if(descriptionWords[j].equals(resultKeywords[k])){
+							if(descriptionWords[j].toLowerCase().equals(resultKeywords[k].toLowerCase())){
 								keyResultScore = 1;
 								break;
 							}						
@@ -266,7 +266,7 @@ public class BugReportEvalByCUEZILLA {
 					}
 					if(keyStepScore == 0){
 						for(int k = 0; k<stepKeywords.length; k++){
-							if(descriptionWords[j].equals(stepKeywords[k])){
+							if(descriptionWords[j].toLowerCase().equals(stepKeywords[k].toLowerCase())){
 								keyStepScore = 1;
 								break;
 							}						
@@ -274,7 +274,7 @@ public class BugReportEvalByCUEZILLA {
 					}
 					if(keyBuildScore == 0){
 						for(int k = 0; k<buildKeywords.length; k++){
-							if(descriptionWords[j].equals(buildKeywords[k])){
+							if(descriptionWords[j].toLowerCase().equals(buildKeywords[k].toLowerCase())){
 								keyBuildScore = 1;
 								break;
 							}						
@@ -282,7 +282,7 @@ public class BugReportEvalByCUEZILLA {
 					}
 					if(keyUIScore == 0){
 						for(int k = 0; k<uiKeywords.length; k++){
-							if(descriptionWords[j].equals(uiKeywords[k])){
+							if(descriptionWords[j].toLowerCase().equals(uiKeywords[k].toLowerCase())){
 								keyUIScore = 1;
 								break;
 							}						
@@ -371,7 +371,7 @@ public class BugReportEvalByCUEZILLA {
 	    while(num >= 0) {
 	    	try{
 		        int startsAt = allText.indexOf("{", endsAt[0]);
-		        System.out.println(startsAt+" "+endsAt[0]);
+//		        System.out.println(startsAt+" "+endsAt[0]);
 		        num = startsAt-endsAt[0];
 		        if(startsAt < endsAt[0]){
 		        	System.err.println(startsAt+" "+endsAt[0]);

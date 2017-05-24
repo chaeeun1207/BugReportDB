@@ -50,7 +50,7 @@ public class BugReportReader {
 //		DB db = new DB(domainMap);	// Just Clean Table
 	//	DB db = new DB(domainMap,1); // Just Drop Attachment Table
 		DB db = new DB(domainMap,true); // Just All Table Dropping
-//	DB db = new DB();				// Just Open Connection
+//		DB db = new DB();				// Just Open Connection
 //		
 		// 50,000 Bug Report Analysis
 		int totalNum = 0;
@@ -58,7 +58,15 @@ public class BugReportReader {
 
 		ArrayList<BugReport> bugReportList = new ArrayList<BugReport>();
 		ArrayList<BugReportMetaField> metaFieldList = new ArrayList<BugReportMetaField>();
-		HashMap<String, ArrayList<Integer>> attachIDMap = new HashMap<String, ArrayList<Integer>>(); 
+		HashMap<String, ArrayList<Integer>> attachIDMap = new HashMap<String, ArrayList<Integer>>();
+		
+		String stackTrace ="";
+	    String tracePattern = "(([a-zA-Z0-9_\\-$]*\\.)*[a-zA-Z_<][a-zA-Z0-9_\\-$>]*" +
+	        		"[a-zA-Z_<(][a-zA-Z0-9_\\-$>);/\\[]*" +
+	        		"\\(([a-zA-Z_][a-zA-Z0-9_\\-]*\\.java:[0-9]*|[a-zA-Z_][a-zA-Z0-9_\\-]*\\.java\\((?i)inlined compiled code\\)|[a-zA-Z_][a-zA-Z0-9_\\-]*\\.java\\((?i)compiled code\\)|(?i)native method|(?i)unknown source)\\))";
+	        
+	    Pattern r = Pattern.compile(tracePattern);
+	    
 		//for(int a = 0; a<4; a++){
 		for(int a = 0; a<3; a++){
 			File directory = new File(filePath[a]);
@@ -135,7 +143,7 @@ public class BugReportReader {
 								reporter = reporter.replace("-", "").replace("_","");
 							if(reporter.contains("@"))
 								reporter = reporter.split("@")[0];
-							if(reporter.contains("?"))
+							if(reporter.contains("\\?"))
 								reporter = reporter.replaceAll("?", "");
 							metaField.setReporter(reporter.replaceAll("<td>", "").replaceAll("</td>", "").replaceAll("'", "").replaceAll(" ", "").replaceAll("\\.", "").toLowerCase());
 						}
@@ -148,7 +156,7 @@ public class BugReportReader {
 								assignee = assignee.replaceAll("@", "").replaceAll("-", "").replaceAll("_","");
 							if(assignee.contains("@"))
 								assignee = assignee.split("@")[0];
-							if(assignee.contains("?"))
+							if(assignee.contains("\\?"))
 								assignee = assignee.replaceAll("?", "");
 							metaField.setAssignee(assignee.replace("<td>", "").replace("</td>", "").toLowerCase().replace(" ", "").replace("\\.", ""));
 							fullAssignee = metaField.getAssignee();
@@ -239,7 +247,7 @@ public class BugReportReader {
 						
 						
 						//3. Read Comment Data
-						if(desc == 2 && str.contains("<a href=\"https://bugs.eclipse.org/bugs/show_bug.cgi?id="+bugID)){
+						if(desc == 2 && str.contains("show_bug.cgi?id="+bugID) && !str.contains("show_bug.cgi?id="+bugID+"#c0")){
 							Comment comment = new Comment();
 							String num = str;
 							num = num.substring(num.indexOf("Comment"), num.indexOf("</")).replace("Comment ", "");
@@ -488,6 +496,8 @@ public class BugReportReader {
 					attachment.setBugID(bugID);
 					attachment.setAttachID(attachList.get(i));
 					int attachID = attachList.get(i);
+					if(db.isAttachID(attachID,key))
+						continue;
 					System.out.print(" "+attachID+" ");
 					doc = Jsoup.connect(attachURL+attachID).maxBodySize(0).timeout(10000).get();
 					Elements attachments = doc.select("div.details");					
@@ -510,8 +520,8 @@ public class BugReportReader {
 						String textContent = doc.select("textarea[name*=comment]").toString();
 						textContent.replaceAll("<textarea name=\"comment\" id=\"editFrame\" class=\"bz_default_hidden\" wrap=\"soft\" disabled rows=\"10\" cols=\"80\">", "");
 						textContent.replaceAll("&gt; ", "");
-						if(textContent.length()>99999)
-							textContent = textContent.substring(0, 99999);
+						if(textContent.length()>9999)
+							textContent = textContent.substring(0, 9999);
 						
 						// A. Is it Patch?						
 						int start = -1;
@@ -549,26 +559,31 @@ public class BugReportReader {
 						}
 						if(end > 0)
 							type = type+ "-patch";
+						textContent = "";
+						for(int j = 0; j < start+1; j++){
+							textContent = textContent + "\n"+itemizedDesc[j];
+						}
+						textContent = textContent + "\n";
+						for(int j = end; j < itemizedDesc.length; j++){
+							textContent = textContent + "\n"+itemizedDesc[j];
+						}
 						
 						System.out.print("PATCH FINISH ");
-						// B. Is it Stack Trace?						
-						String stackTrace ="";
-					    String tracePattern = "(([a-zA-Z0-9_\\-$]*\\.)*[a-zA-Z_<][a-zA-Z0-9_\\-$>]*" +
-					        		"[a-zA-Z_<(][a-zA-Z0-9_\\-$>);/\\[]*" +
-					        		"\\(([a-zA-Z_][a-zA-Z0-9_\\-]*\\.java:[0-9]*|[a-zA-Z_][a-zA-Z0-9_\\-]*\\.java\\((?i)inlined compiled code\\)|[a-zA-Z_][a-zA-Z0-9_\\-]*\\.java\\((?i)compiled code\\)|(?i)native method|(?i)unknown source)\\))";
-					        
-					    Pattern r = Pattern.compile(tracePattern);
-					    Matcher m = r.matcher(textContent);		    
-				        while (m.find()) {
-				        	String group = m.group();
-				        	stackTrace =  stackTrace+"\n"+group;
-				        	textContent = textContent.replace(group, "");
-				        	if(!type.contains("stacktrace"))
-				        		type = type + "-stacktrace";break;
-				        }			        
-
-						System.out.print("STRACE FINISH ");
-				        // C. Is it code example?
+						if(!type.contains("patch")){
+							// B. Is it Stack Trace?						
+							
+						    Matcher m = r.matcher(textContent);		    
+					        while (m.find()) {
+					        	String group = m.group();
+					        	stackTrace =  stackTrace+"\n"+group;
+					        	textContent = textContent.replace(group, "");
+					        	if(!type.contains("stacktrace"))
+					        		type = type + "-stacktrace";break;
+					        }			        
+	
+							System.out.print("STRACE FINISH ");					       
+						}
+						 // C. Is it code example?
 				        if(codeEx==1)
 				        	type = type + "-code";
 						System.out.print("CODE");

@@ -321,7 +321,7 @@ public class DB {
 		catch(Exception e1)
 		{
 			errorList.add(b.getBugID()+" "+e1.getMessage());
-			System.out.print(key+" ");
+			System.out.print(key+" already contain "+b.getBugID());
 			e1.printStackTrace();			
 		}
 	}	
@@ -397,6 +397,15 @@ public class DB {
 	public void close(String domain, String project) {
 		// TODO Auto-generated method stub
 		
+	}
+
+	public boolean isAttachID(int attachID, String key) throws SQLException {
+		Statement q = connMap.get(key.split("-",2)[1]).createStatement();
+		ResultSet rs = q.executeQuery("SELECT * FROM ATTACHMENT WHERE ATTACH_ID = "+attachID+";");
+		if(rs.next())
+			return true;
+		else
+			return false;
 	}
 	
 
