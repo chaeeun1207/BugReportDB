@@ -322,7 +322,7 @@ public class DB {
 		{
 			errorList.add(b.getBugID()+" "+e1.getMessage());
 			System.out.print(key+" already contain "+b.getBugID());
-			e1.printStackTrace();			
+//			e1.printStackTrace();			
 		}
 	}	
 	

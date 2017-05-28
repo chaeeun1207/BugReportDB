@@ -49,8 +49,8 @@ public class BugReportReader {
 //		
 //		DB db = new DB(domainMap);	// Just Clean Table
 	//	DB db = new DB(domainMap,1); // Just Drop Attachment Table
-		DB db = new DB(domainMap,true); // Just All Table Dropping
-//		DB db = new DB();				// Just Open Connection
+//		DB db = new DB(domainMap,true); // Just All Table Dropping
+		DB db = new DB();				// Just Open Connection
 //		
 		// 50,000 Bug Report Analysis
 		int totalNum = 0;
@@ -68,7 +68,7 @@ public class BugReportReader {
 	    Pattern r = Pattern.compile(tracePattern);
 	    
 		//for(int a = 0; a<4; a++){
-		for(int a = 0; a<3; a++){
+		for(int a = 9; a<filePath.length; a++){
 			File directory = new File(filePath[a]);
 			
 			File[] files = directory.listFiles();
@@ -76,6 +76,7 @@ public class BugReportReader {
 			for(int i = 0 ; i<files.length; i++){
 //			for(int i =0 ; i<50; i++){ // for debugging
 				try{				
+//					if(!files[i].getName().contains("74421")) continue;//for debug
 					System.out.print(files[i].getName()+"\t");
 					BugReport bugReport = new BugReport();			
 					BugReportMetaField metaField = new BugReportMetaField();			
@@ -99,6 +100,7 @@ public class BugReportReader {
 							fail = true;
 							break;
 						}
+//						System.out.println(str);
 						if(str.contains("https://bugs.eclipse.org/bugs/attachment ")){
 							String attachStr = str.split("https://bugs.eclipse.org/bugs/attachment ")[1];
 							if(attachStr.contains("</a")){
@@ -224,9 +226,12 @@ public class BugReportReader {
 						
 						if(desc == 1){
 							String description = bugReport.getDescription()+"\n"+str;
-							if(str.contains("</pre>")){
+							if(str.contains("</pre")){
 								desc = 2;
-								description = description.replace("</pre>", "");
+								if(str.contains("</pre>"))
+									description = description.replace("</pre>", "");
+								else
+									description = description.replace("</pre", "");
 							}
 							
 							bugReport.setDescription(description);
@@ -284,6 +289,15 @@ public class BugReportReader {
 									if(str.contains("*** <a class=\"bz_bug_link")){
 										break;
 									}
+									
+									if(str.contains("https://bugs.eclipse.org/bugs/attachment ")){
+										String attachStr = str.split("https://bugs.eclipse.org/bugs/attachment ")[1];
+										if(attachStr.contains("</a")){
+											attachStr = attachStr.substring(0, attachStr.indexOf("</a"));
+											attachIDList.add(Integer.parseInt(attachStr));
+										}
+									}
+									
 									if(str.contains("</pre>")){
 										String description = str.replace("<pre class=\"bz_comment_text\">", "").replace("</pre>", "");
 										if(description.length() > 99999)

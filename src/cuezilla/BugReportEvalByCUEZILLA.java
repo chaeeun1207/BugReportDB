@@ -60,14 +60,27 @@ public class BugReportEvalByCUEZILLA {
 			String domain = key.split("-")[0];
 			String project = key.split("-")[1];
 			
-//			System.out.println(key);
+			System.out.println(key);
 			
 			Connection conn = connMap.get(key);
 			Statement q = conn.createStatement();
 			ResultSet rs = q.executeQuery("SELECT * FROM BUG_REPORT A, META_FIELD B WHERE A.BUG_ID = B.BUG_ID");
 //			System.out.print(rs);
+			
+			String stackTrace ="";
+		    String tracePattern = "(([a-zA-Z0-9_\\-$]*\\.)*[a-zA-Z_<][a-zA-Z0-9_\\-$>]*" +
+		        		"[a-zA-Z_<(][a-zA-Z0-9_\\-$>);/\\[]*" +
+		        		"\\(([a-zA-Z_][a-zA-Z0-9_\\-]*\\.java:[0-9]*|[a-zA-Z_][a-zA-Z0-9_\\-]*\\.java\\((?i)inlined compiled code\\)|[a-zA-Z_][a-zA-Z0-9_\\-]*\\.java\\((?i)compiled code\\)|(?i)native method|(?i)unknown source)\\))";
+		        
+		    Pattern r = Pattern.compile(tracePattern);
+		    
 			while(rs.next()){				
 				int bugID = rs.getInt("BUG_ID");
+				
+				Statement q22 = conn.createStatement();
+				ResultSet rs22 = q22.executeQuery("SELECT * FROM CUEZILLA WHERE BUG_ID = "+bugID);
+				if(rs22.next()) continue;
+				
 				String description  = rs.getString("DESCRIPTION");
 				String dateString = rs.getString("OPEN_DATE");
 				Date reportDate = format.parse(dateString);
@@ -129,12 +142,7 @@ public class BugReportEvalByCUEZILLA {
 //				System.out.println(domain+" "+project+" "+bugID+" "+description);
 				
 				//2. Stack Trace Extraction			
-				String stackTrace ="";
-			    String tracePattern = "(([a-zA-Z0-9_\\-$]*\\.)*[a-zA-Z_<][a-zA-Z0-9_\\-$>]*" +
-			        		"[a-zA-Z_<(][a-zA-Z0-9_\\-$>);/\\[]*" +
-			        		"\\(([a-zA-Z_][a-zA-Z0-9_\\-]*\\.java:[0-9]*|[a-zA-Z_][a-zA-Z0-9_\\-]*\\.java\\((?i)inlined compiled code\\)|[a-zA-Z_][a-zA-Z0-9_\\-]*\\.java\\((?i)compiled code\\)|(?i)native method|(?i)unknown source)\\))";
-			        
-			    Pattern r = Pattern.compile(tracePattern);
+				
 			    Matcher m = r.matcher(description);		    
 		        while (m.find()) {
 		        	String group = m.group();
