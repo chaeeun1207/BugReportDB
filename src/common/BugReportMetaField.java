@@ -17,6 +17,7 @@ public class BugReportMetaField {
 	String priority;
 	String sever;
 	String assignee;
+	String finalAssignee;
 	String qa;
 	String mileStone;
 	String whiteboard;
@@ -25,6 +26,25 @@ public class BugReportMetaField {
 	
 
 
+	public void setBugReportMetaField(int bugID, String reporter, String domain, String product, String component,
+			String productVer, String hardware, String openDate, String modifiedDate, String status, String priority,
+			String sever, String assignee, String os, String finalAssignee) {
+		this.bugID = bugID;
+		this.reporter = reporter;
+		this.domain = domain;
+		this.product = product;
+		this.component = component;
+		this.productVer = productVer;
+		this.hardware = hardware;
+		this.openDate = openDate;
+		this.modifiedDate = modifiedDate;
+		this.status = status;
+		this.priority = priority;
+		this.sever = sever;
+		this.assignee = assignee;
+		this.os = os;
+		this.finalAssignee = finalAssignee;
+	}
 	public String getModifiedDate() {
 		return modifiedDate;
 	}
@@ -139,6 +159,12 @@ public class BugReportMetaField {
 	}
 	public void setHardware(String hardware) {
 		this.hardware = hardware;
+	}
+	public String getFinalAssignee() {
+		return finalAssignee;
+	}
+	public void setFinalAssignee(String finalAssignee) {
+		this.finalAssignee = finalAssignee;
 	}
 	@Override
 	public String toString() {

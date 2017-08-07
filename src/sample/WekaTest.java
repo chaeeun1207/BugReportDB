@@ -24,7 +24,7 @@ public class WekaTest {
 		plainText.setBuffer(forPredictionsPrinting);
 		options[0] = "-p"; options[1]="1";
 		plainText.setOptions(options);
-		plainText.setOutputDistribution(true);		
+//		plainText.setOutputDistribution(true);		
 		eval.crossValidateModel(classifier, data, 10, new Random(1), plainText);
 		System.out.println(forPredictionsPrinting.toString());
 		
