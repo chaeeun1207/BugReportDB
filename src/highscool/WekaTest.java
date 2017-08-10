@@ -5,6 +5,7 @@ import java.util.Random;
 import weka.classifiers.evaluation.Evaluation;
 import weka.classifiers.evaluation.output.prediction.AbstractOutput;
 import weka.classifiers.evaluation.output.prediction.CSV;
+import weka.classifiers.trees.J48;
 import weka.classifiers.trees.RandomForest;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
@@ -22,7 +23,6 @@ public class WekaTest {
 		
 		// 2. Set Machine Learning Algorighm (Classifier)
 		RandomForest classifier = new RandomForest();
-		
 		// 3. Evaluation
 		Evaluation eval = new Evaluation(data);		
 		StringBuffer forPredictionsPrinting = new StringBuffer();
