@@ -52,7 +52,7 @@ public class BugReport {
 	}
 	@Override
 	public String toString() {
-		return "BugReport [ summary=" + summary + ", description="+ description +" " +commentList.size() + "]";
+		return "BugReport "+bugID+"[ summary=" + summary + ", description="+ description +" " +commentList.size() + "]";
 	}
 	
 	

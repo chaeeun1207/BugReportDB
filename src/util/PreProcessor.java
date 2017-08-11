@@ -59,7 +59,7 @@ public class PreProcessor {
 
 		if (wordBuffer.length() != 0) {
 			String word = wordBuffer.toString();
-			if (!word.equals("") && !word.equals(" "))
+			if (!word.equals("") && !word.equals(" ") && word.length() < 3)
 				wordList.add(word);
 			wordBuffer = new StringBuffer();
 		}
@@ -99,6 +99,8 @@ public class PreProcessor {
 			String word = content[i].toLowerCase();
 			if (word.length() > 0) {
 				String stemWord = Stem.stem(word);
+				if( stemWord.length() < 3)
+					continue;
 				
 				// debug code
 //					System.out.printf("%d stemWord: %s\n", i, stemWord);
@@ -111,7 +113,19 @@ public class PreProcessor {
 				try{
 					if (!Stopword.isEnglishStopword(stemWord) && !Stopword.isProjectKeyword(stemWord) 
 							&& !Stopword.isJavaKeyword(stemWord)) {
-						int num = Integer.parseInt(stemWord);
+//						long num = Long.parseLong(stemWord);
+						boolean flag = true;
+						for(int j = 0 ; j<stemWord.length(); j++){
+							char a = stemWord.charAt(j);
+							if(a >= '0' && a <= '9'){
+								flag = false;
+								break;
+							}
+						}
+						if(flag == true){
+							contentBuf.append(stemWord);
+							contentBuf.append(" ");
+						}
 					}
 				}catch(Exception e){
 					contentBuf.append(stemWord);
